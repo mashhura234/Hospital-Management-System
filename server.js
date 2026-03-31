@@ -17,7 +17,7 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const app = express();
 
 // MIDDLEWARE
-app.use(cors());               // Allow frontend to call this backend
+app.use(cors({ origin: '*'}));               // Allow frontend to call this backend
 app.use(express.json());       // Allow backend to read JSON data from requests
 
 // ROUTES
