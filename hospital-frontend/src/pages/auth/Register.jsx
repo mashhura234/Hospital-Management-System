@@ -30,7 +30,7 @@ function Register() {
     setError('');
     setSuccess('');
 
-    // Validation
+    // Frontend Validation
     if (!formData.name || !formData.email || !formData.password) {
       setError('Please fill in all required fields.');
       return;
@@ -47,7 +47,7 @@ function Register() {
     try {
       setLoading(true);
 
-      // Step 1 — Register user
+      // Step 1: Register user in the 'users' table
       const registerResponse = await axios.post(
         'http://localhost:5000/api/auth/register',
         {
@@ -60,7 +60,7 @@ function Register() {
 
       const userId = registerResponse.data.userId;
 
-      // Step 2 — Login to get token
+      // Step 2: Login immediately to get the JWT token needed for profile creation
       const loginResponse = await axios.post(
         'http://localhost:5000/api/auth/login',
         {
@@ -71,35 +71,43 @@ function Register() {
 
       const token = loginResponse.data.token;
 
-      // Step 3 — Create profile based on role
+      // Step 3: Create specific profile (Patient or Doctor)
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
       if (formData.role === 'patient') {
         await axios.post(
           'http://localhost:5000/api/patients',
           {
             user_id: userId,
-            age: formData.age || 0,
+            age: parseInt(formData.age) || 0,
             gender: formData.gender,
             phone: formData.phone,
           },
-          { headers: { Authorization: `Bearer ${token}` } }
+          config
         );
       } else if (formData.role === 'doctor') {
         await axios.post(
           'http://localhost:5000/api/doctors',
           {
             user_id: userId,
-            department_id: 1,
+            department_id: 1, // Defaulting to 1, ensure this ID exists in your DB
             specialization: 'General',
             phone: formData.phone,
           },
-          { headers: { Authorization: `Bearer ${token}` } }
+          config
         );
       }
 
       setSuccess('Registration successful! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 2000);
+      
+      // Clear storage to ensure a clean login later
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+
+      setTimeout(() => navigate('/login'), 2500);
 
     } catch (err) {
+      console.error(err);
       setError(
         err.response?.data?.message || 'Registration failed. Please try again.'
       );
@@ -110,7 +118,6 @@ function Register() {
 
   return (
     <div className="register-page">
-      {/* Left Panel */}
       <div className="register-left">
         <div className="register-brand">
           <div className="register-cross">✚</div>
@@ -123,7 +130,6 @@ function Register() {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="register-right">
         <div className="register-card">
           <h2 className="register-title">Create Account</h2>
