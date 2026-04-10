@@ -42,7 +42,7 @@ function DoctorDashboard() {
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Doctor Dashboard</h1>
-            <p className="dashboard-subtitle">Welcome, Dr. Kamal! Real-time appointment data.</p>
+            <p className="dashboard-subtitle">Welcome,! Real-time appointment data.</p>
           </div>
           <div className="dashboard-date">📅 {new Date().toDateString()}</div>
         </div>
@@ -82,18 +82,21 @@ function DoctorDashboard() {
               </thead>
               <tbody>
                 {appointments.map((appt, i) => (
-                  <tr key={appt._id} className="table-row">
-                    <td>{i + 1}</td>
-                    {/* If your database field is different, we will fix this next */}
-                    <td><strong>{appt.patientName || "New Patient"}</strong></td>
-                    <td>{new Date(appt.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                    <td>
-                      <span className={`status-badge status-${appt.status?.toLowerCase()}`}>
-                        {appt.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+              <tr key={appt.id} className="table-row">
+             <td>{i + 1}</td>
+             {/* Notice we use appt.patient_name because of your SQL query */}
+              <td><strong>{appt.patient_name}</strong></td> 
+    
+            {/* Formatting the date and time from your DB */}
+           <td>{appt.time} ({new Date(appt.date).toLocaleDateString()})</td>
+    
+          <td>
+           <span className={`status-badge status-${appt.status.toLowerCase()}`}>
+        {appt.status}
+          </span>
+           </td>
+           </tr>
+           ))}
               </tbody>
             </table>
           )}
