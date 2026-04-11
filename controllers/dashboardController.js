@@ -4,11 +4,15 @@ const db = require('../config/db');
 // ADMIN DASHBOARD STATS
 const getAdminStats = async (req, res) => {
   try {
-    // Total doctors
-    const [doctors] = await db.query('SELECT COUNT(*) as total FROM doctors');
+    // Count doctors from users table with role='doctor'
+    const [doctors] = await db.query(
+      'SELECT COUNT(*) as total FROM users WHERE role = ?', ['doctor']
+    );
     
-    // Total patients
-    const [patients] = await db.query('SELECT COUNT(*) as total FROM patients');
+    // Count patients from users table with role='patient'
+    const [patients] = await db.query(
+      'SELECT COUNT(*) as total FROM users WHERE role = ?', ['patient']
+    );
     
     // Total departments
     const [departments] = await db.query('SELECT COUNT(*) as total FROM departments');
@@ -18,7 +22,7 @@ const getAdminStats = async (req, res) => {
     
     // Pending appointments
     const [pending] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE status = ?', ['pending']
+      'SELECT COUNT(*) as total FROM appointments WHERE status = ?', ['scheduled']
     );
     
     // Completed appointments
@@ -31,18 +35,20 @@ const getAdminStats = async (req, res) => {
       'SELECT COUNT(*) as total FROM appointments WHERE status = ?', ['cancelled']
     );
 
-    // Recent appointments
+    // Recent appointments with proper column names
     const [recentAppointments] = await db.query(`
       SELECT a.id,
              u_patient.name AS patient_name,
              u_doctor.name AS doctor_name,
-             a.date, a.time, a.status
+             a.appointment_date AS date,
+             a.appointment_time AS time,
+             a.status
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
       JOIN users u_patient ON p.user_id = u_patient.id
       JOIN doctors d ON a.doctor_id = d.id
       JOIN users u_doctor ON d.user_id = u_doctor.id
-      ORDER BY a.created_at DESC
+      ORDER BY a.appointment_date DESC, a.appointment_time DESC
       LIMIT 5
     `);
 
@@ -105,12 +111,14 @@ const getDoctorStats = async (req, res) => {
     const [recentAppointments] = await db.query(`
       SELECT a.id,
              u_patient.name AS patient_name,
-             a.date, a.time, a.status
+             a.appointment_date AS date,
+             a.appointment_time AS time,
+             a.status
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
       JOIN users u_patient ON p.user_id = u_patient.id
       WHERE a.doctor_id = ?
-      ORDER BY a.date DESC
+      ORDER BY a.appointment_date DESC, a.appointment_time DESC
       LIMIT 5
     `, [doctorId]);
 
@@ -165,13 +173,15 @@ const getPatientStats = async (req, res) => {
       SELECT a.id,
              u_doctor.name AS doctor_name,
              dept.name AS department_name,
-             a.date, a.time, a.status
+             a.appointment_date AS date,
+             a.appointment_time AS time,
+             a.status
       FROM appointments a
       JOIN doctors d ON a.doctor_id = d.id
       JOIN users u_doctor ON d.user_id = u_doctor.id
       JOIN departments dept ON d.department_id = dept.id
       WHERE a.patient_id = ?
-      ORDER BY a.date DESC
+      ORDER BY a.appointment_date DESC, a.appointment_time DESC
       LIMIT 5
     `, [patientId]);
 

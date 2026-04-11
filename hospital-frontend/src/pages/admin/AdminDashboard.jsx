@@ -9,20 +9,62 @@ function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [user, setUser] = useState(null);
 
-  // Get user info from localStorage
-  const user = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // If not logged in or not admin, redirect to login
-    if (!token || !user || user.role !== 'admin') {
+    // Check if token exists
+    if (!token) {
       navigate('/login');
       return;
     }
 
-    fetchDashboardStats();
-  }, []);
+    // Fetch fresh user data from backend
+    const fetchUser = async () => {
+      try {
+        const response = await axios.get(
+          'http://localhost:5000/api/auth/me',
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const fetchedUser = response.data.user;
+        setUser(fetchedUser);
+
+        // Verify user is admin
+        if (fetchedUser.role !== 'admin') {
+          navigate('/login');
+          return;
+        }
+
+        // Update localStorage with fresh data
+        localStorage.setItem('user', JSON.stringify(fetchedUser));
+
+        // Fetch dashboard stats
+        fetchDashboardStats();
+      } catch (err) {
+        console.error('Error fetching user:', err);
+        // Fallback to localStorage if API fails
+        try {
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const storedUser = JSON.parse(userStr);
+            if (storedUser.role !== 'admin') {
+              navigate('/login');
+              return;
+            }
+            setUser(storedUser);
+            fetchDashboardStats();
+          } else {
+            navigate('/login');
+          }
+        } catch (parseErr) {
+          navigate('/login');
+        }
+      }
+    };
+
+    fetchUser();
+  }, [token, navigate]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -33,11 +75,11 @@ function AdminDashboard() {
         }
       );
       setStats(response.data);
+      setLoading(false);
     } catch (err) {
       setError('Failed to load dashboard data.');
-      console.error(err);
-    } finally {
       setLoading(false);
+      console.error(err);
     }
   };
 

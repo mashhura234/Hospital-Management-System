@@ -12,6 +12,9 @@ const app = express();
 // 4. Import database connection
 const db = require('./config/db');
 
+// 4.5 Import database initialization
+const initializeTables = require('./config/initDb');
+
 // 5. MIDDLEWARE
 // Enable CORS to allow your React frontend (port 3000) to talk to this backend
 app.use(cors({ origin: '*' })); 
@@ -39,7 +42,10 @@ app.get('/', (req, res) => {
   res.json({ message: 'Hospital Management System API is running! 🏥' });
 });
 
-// 9. Start the server
+// 9. Initialize database tables
+initializeTables();
+
+// 10. Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Server is running on http://localhost:${PORT}`);

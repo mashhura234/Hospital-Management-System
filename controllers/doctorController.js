@@ -51,10 +51,17 @@ const getDoctorById = async (req, res) => {
 const createDoctor = async (req, res) => {
   try {
     const { user_id, department_id, specialization, phone } = req.body;
+    const tokenUserId = req.user.id;
+    const tokenUserRole = req.user.role;
 
     // Check if all fields are provided
     if (!user_id || !department_id || !specialization || !phone) {
       return res.status(400).json({ message: 'All fields are required.' });
+    }
+
+    // Authorization check: User can only create profile for themselves OR admin can create for others
+    if (user_id !== tokenUserId && tokenUserRole !== 'admin') {
+      return res.status(403).json({ message: 'You can only create a profile for yourself. Contact admin to create for others.' });
     }
 
     // Check if user exists and has doctor role

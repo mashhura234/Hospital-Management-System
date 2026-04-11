@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/Sidebar.css';
 
 function Sidebar({ role, userName }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [user, setUser] = useState(null);
+
+  // Load user data from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
 
   const menus = {
     admin: [
@@ -30,10 +43,15 @@ function Sidebar({ role, userName }) {
   };
 
   const handleLogout = () => {
+    // Clear all user data from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // Redirect to login
     navigate('/login');
   };
 
-  const currentMenu = menus[role] || menus['patient'];
+  const currentRole = user?.role || role || 'patient';
+  const displayName = user?.name || userName || 'User';
 
   return (
     <div className="sidebar">
@@ -46,19 +64,22 @@ function Sidebar({ role, userName }) {
       {/* User Info */}
       <div className="sidebar-user">
         <div className="sidebar-avatar">
-          {userName ? userName[0].toUpperCase() : 'U'}
+          {displayName ? displayName[0].toUpperCase() : 'U'}
         </div>
         <div>
-          <div className="sidebar-username">{userName || 'User'}</div>
+          <div className="sidebar-username">{displayName}</div>
+          <div className="sidebar-email" style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+            {user?.email || 'N/A'}
+          </div>
           <div className="sidebar-role">
-            {role?.charAt(0).toUpperCase() + role?.slice(1)}
+            {currentRole?.charAt(0).toUpperCase() + currentRole?.slice(1)}
           </div>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {currentMenu.map((item) => {
+        {menus[currentRole]?.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link

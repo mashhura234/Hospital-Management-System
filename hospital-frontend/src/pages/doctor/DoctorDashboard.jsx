@@ -1,34 +1,50 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from '../../components/Sidebar';
 import '../../styles/DoctorDashboard.css';
 
 function DoctorDashboard() {
-  // 1. Setup state for real data
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 2. This runs as soon as the page opens
   useEffect(() => {
-    const getBackendData = async () => {
-      try {
-        const token = localStorage.getItem('token'); // Gets the token you saw in Application tab
-        
-        const response = await axios.get('http://localhost:5000/api/appointments', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+    // Get user and token from localStorage
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
 
-        // Update the state with real data from your database
-        setAppointments(response.data); 
-      } catch (error) {
-        console.error("Fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!token || !storedUser) {
+      navigate('/login');
+      return;
+    }
 
-    getBackendData();
-  }, []);
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+
+      // Fetch doctor's appointments
+      getBackendData(token);
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      navigate('/login');
+    }
+  }, [navigate]);
+
+  const getBackendData = async (token) => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/appointments', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setAppointments(response.data);
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 3. Logic for the Stat Cards
   const totalCount = appointments.length;
@@ -37,12 +53,12 @@ function DoctorDashboard() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar role="doctor" userName="Dr. Kamal" />
+      <Sidebar role={user?.role || 'doctor'} userName={user?.name} />
       <div className="dashboard-main">
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Doctor Dashboard</h1>
-            <p className="dashboard-subtitle">Welcome,! Real-time appointment data.</p>
+            <p className="dashboard-subtitle">Welcome, {user?.name}! Real-time appointment data.</p>
           </div>
           <div className="dashboard-date">📅 {new Date().toDateString()}</div>
         </div>

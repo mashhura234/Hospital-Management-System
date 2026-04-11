@@ -9,6 +9,7 @@ function Login() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    role: 'patient',
   });
 
   const [error, setError] = useState('');
@@ -23,7 +24,7 @@ function Login() {
     setError('');
 
     // Validation
-    if (!formData.email || !formData.password) {
+    if (!formData.email || !formData.password || !formData.role) {
       setError('Please fill in all fields.');
       return;
     }
@@ -37,6 +38,12 @@ function Login() {
         {
           email: formData.email,
           password: formData.password,
+          role: formData.role,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       );
 
@@ -111,6 +118,20 @@ function Login() {
                 onChange={handleChange}
                 className="form-input"
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Login As *</label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="form-input"
+              >
+                <option value="admin">Admin</option>
+                <option value="doctor">Doctor</option>
+                <option value="patient">Patient</option>
+              </select>
             </div>
 
             <button

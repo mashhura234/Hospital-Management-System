@@ -103,4 +103,39 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+// -----------------------------------------------
+// GET CURRENT USER (Refresh user data)
+// -----------------------------------------------
+const getCurrentUser = async (req, res) => {
+  try {
+    // req.user is populated by verifyToken middleware
+    const userId = req.user.id;
+
+    // Fetch fresh user data from database
+    const [users] = await db.query(
+      'SELECT id, name, email, role FROM users WHERE id = ?', [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const user = users[0];
+
+    res.status(200).json({
+      message: 'User data retrieved successfully!',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ message: 'Server error. Please try again.' });
+  }
+};
+
+module.exports = { register, login, getCurrentUser };

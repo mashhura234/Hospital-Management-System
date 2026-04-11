@@ -16,8 +16,8 @@ router.get('/', verifyToken, getAllDoctors);
 // GET /api/doctors/:id - anyone logged in can view
 router.get('/:id', verifyToken, getDoctorById);
 
-// POST /api/doctors - only admin can create
-router.post('/', verifyToken, verifyAdmin, createDoctor);
+// POST /api/doctors - logged in users can create their own profile
+router.post('/', verifyToken, createDoctor);
 
 // PUT /api/doctors/:id - only admin can update
 router.put('/:id', verifyToken, verifyAdmin, updateDoctor);

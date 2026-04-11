@@ -55,6 +55,11 @@ function Register() {
           email: formData.email,
           password: formData.password,
           role: formData.role,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       );
 
@@ -66,6 +71,11 @@ function Register() {
         {
           email: formData.email,
           password: formData.password,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       );
 
