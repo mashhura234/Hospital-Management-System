@@ -1,11 +1,14 @@
 .sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
+  position: sticky;
+  top: 0;
   background: linear-gradient(180deg, #0a3d55, #0a5c7f);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   box-shadow: 3px 0 15px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
 }
 
 /* Logo */

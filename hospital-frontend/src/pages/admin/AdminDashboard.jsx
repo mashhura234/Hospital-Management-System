@@ -77,9 +77,15 @@ function AdminDashboard() {
       setStats(response.data);
       setLoading(false);
     } catch (err) {
-      setError('Failed to load dashboard data.');
+      // Show detailed error message from API or generic error
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to load dashboard data.';
+      setError(`❌ ${errorMessage}`);
       setLoading(false);
-      console.error(err);
+      console.error('❌ Dashboard error:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        fullError: err.message
+      });
     }
   };
 
@@ -153,9 +159,11 @@ function AdminDashboard() {
               >
                 {stat.icon}
               </div>
-              <div>
-                <div className="stat-value">{stat.value}</div>
-                <div className="stat-label">{stat.label}</div>
+              <div className="stat-card-content">
+                <div>
+                  <div className="stat-value">{stat.value}</div>
+                  <div className="stat-label">{stat.label}</div>
+                </div>
               </div>
             </div>
           ))}

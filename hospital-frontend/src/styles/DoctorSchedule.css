@@ -1,0 +1,142 @@
+/* src/styles/DoctorSchedule.css */
+
+.schedule-page {
+  padding: 2rem;
+  background-color: #f1f5f9;
+  min-height: 100vh;
+}
+
+.schedule-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.schedule-header-main h1 {
+  font-size: 1.6rem;
+  color: #1e293b;
+  margin-bottom: 0.2rem;
+}
+
+.schedule-header-main p {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.refresh-schedule-btn {
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Card Grid */
+.schedule-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.doc-schedule-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.doc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.doc-profile-circle {
+  width: 48px;
+  height: 48px;
+  background: #0d9488;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.doc-name-area h3 {
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.doc-dept-label {
+  font-size: 0.75rem;
+  color: #0d9488;
+  font-weight: 600;
+}
+
+/* Stats Styling */
+.doc-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background: #f8fafc;
+  padding: 0.8rem;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.text-teal-600 { color: #0d9488; }
+
+/* Availability */
+.availability-section {
+  font-size: 0.85rem;
+  color: #475569;
+  margin-bottom: 1.25rem;
+}
+
+.avail-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.avail-info strong { color: #1e293b; }
+
+.view-details-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.view-details-btn:hover {
+  opacity: 0.9;
+}
+
+.schedule-loader { padding: 4rem; text-align: center; color: #0d9488; }
+.schedule-error { color: #ef4444; padding: 2rem; text-align: center; }

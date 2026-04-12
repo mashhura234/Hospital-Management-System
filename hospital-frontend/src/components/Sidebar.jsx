@@ -24,8 +24,8 @@ function Sidebar({ role, userName }) {
       { label: 'Dashboard', path: '/admin/dashboard', icon: '🏠' },
       { label: 'Departments', path: '/admin/departments', icon: '🏢' },
       { label: 'Doctors', path: '/admin/doctors', icon: '👨‍⚕️' },
-      { label: 'Add Doctor', path: '/admin/add-doctor', icon: '➕' },
-      { label: 'Patient Appointments', path: '/admin/patient-appointments', icon: '🩺' },
+      
+     
       { label: 'Doctor Schedule', path: '/admin/doctor-schedule', icon: '📅' },
       { label: 'Patients', path: '/admin/patients', icon: '🧑‍🦽' },
       { label: 'Appointments', path: '/admin/appointments', icon: '📅' },

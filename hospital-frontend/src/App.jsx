@@ -9,9 +9,9 @@ import ManageDepartments from './pages/admin/ManageDepartments';
 import ManageDoctors from './pages/admin/ManageDoctors';
 import ManagePatients from './pages/admin/ManagePatients';
 import ManageAppointments from './pages/admin/ManageAppointments';
-import AddDoctorForm from './pages/admin/AddDoctorForm';
+
 import PatientAppointmentTable from './pages/admin/PatientAppointmentTable';
-import DoctorScheduleTable from './pages/admin/DoctorScheduleTable';
+import DoctorSchedule from './pages/admin/DoctorSchedule';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import DoctorPatients from './pages/doctor/DoctorPatients';
@@ -30,9 +30,9 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/departments" element={<ManageDepartments />} />
         <Route path="/admin/doctors" element={<ManageDoctors />} />
-        <Route path="/admin/add-doctor" element={<AddDoctorForm />} />
+       
         <Route path="/admin/patient-appointments" element={<PatientAppointmentTable />} />
-        <Route path="/admin/doctor-schedule" element={<DoctorScheduleTable />} />
+        <Route path="/admin/doctor-schedule" element={<DoctorSchedule />} />
         <Route path="/admin/patients" element={<ManagePatients />} />
         <Route path="/admin/appointments" element={<ManageAppointments />} />
         <Route path="/doctor/dashboard" element={<DoctorDashboard />} />

@@ -85,12 +85,20 @@ function BookAppointment() {
       setLoading(true);
       const token = localStorage.getItem('token');
 
+      // Get patient ID from user object
+      const patientId = user?.id;
+      if (!patientId) {
+        setError('Patient ID not found. Please log in again.');
+        return;
+      }
+
       await axios.post(
         'http://localhost:5000/api/appointments',
         {
+          patient_id: patientId,
           doctor_id: formData.doctor,
-          appointment_date: formData.date,
-          appointment_time: formData.time,
+          date: formData.date,
+          time: formData.time,
           reason: formData.reason
         },
         { headers: { Authorization: `Bearer ${token}` } }

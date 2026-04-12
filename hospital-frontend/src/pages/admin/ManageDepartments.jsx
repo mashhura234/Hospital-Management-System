@@ -1,147 +1,86 @@
- 
-import React, { useState } from 'react';
-import Sidebar from '../../components/Sidebar';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import '../../styles/ManageDepartments.css';
 
 function ManageDepartments() {
-  const [departments, setDepartments] = useState([
-    { id: 1, name: 'Cardiology', description: 'Heart and blood vessel treatment' },
-    { id: 2, name: 'Neurology', description: 'Brain and nervous system' },
-    { id: 3, name: 'Orthopedics', description: 'Bones, joints and muscles' },
-    { id: 4, name: 'Pediatrics', description: 'Medical care for children' },
-  ]);
+  const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [showModal, setShowModal] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
-  const [error, setError] = useState('');
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
 
-  const openAddModal = () => {
-    setEditItem(null);
-    setFormData({ name: '', description: '' });
-    setError('');
-    setShowModal(true);
-  };
-
-  const openEditModal = (dept) => {
-    setEditItem(dept);
-    setFormData({ name: dept.name, description: dept.description });
-    setError('');
-    setShowModal(true);
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSave = () => {
-    if (!formData.name.trim()) {
-      setError('Department name is required.');
-      return;
-    }
-    if (editItem) {
-      setDepartments(departments.map(d =>
-        d.id === editItem.id ? { ...d, ...formData } : d
-      ));
-    } else {
-      const newDept = {
-        id: departments.length + 1,
-        name: formData.name,
-        description: formData.description,
-      };
-      setDepartments([...departments, newDept]);
-    }
-    setShowModal(false);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this department?')) {
-      setDepartments(departments.filter(d => d.id !== id));
+  const fetchDepartments = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/departments', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDepartments(response.data);
+      setLoading(false);
+    } catch (err) {
+      setError("Could not load departments. Please try again later.");
+      setLoading(false);
     }
   };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this department?")) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`http://localhost:5000/api/departments/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setDepartments(departments.filter(dept => dept.id !== id));
+      } catch (err) {
+        alert("Error deleting department: " + (err.response?.data?.message || "Server error"));
+      }
+    }
+  };
+
+  if (loading) return <div className="dept-loader">Loading Departments...</div>;
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar role="admin" userName="Admin" />
-
-      <div className="dashboard-main">
-        <div className="dashboard-header">
-          <div>
-            <h1 className="dashboard-title">Manage Departments</h1>
-            <p className="dashboard-subtitle">Add, edit or remove hospital departments</p>
-          </div>
-          <button onClick={openAddModal} className="btn-add">
-            + Add Department
-          </button>
+    <div className="manage-dept-container">
+      <div className="dept-header">
+        <div>
+          <h1>Hospital Departments</h1>
+          <p>Manage medical units and clinical specializations</p>
         </div>
-
-        <div className="table-card">
-          <table className="data-table">
-            <thead>
-              <tr className="table-head-row">
-                <th>#</th>
-                <th>Department Name</th>
-                <th>Description</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {departments.map((dept, index) => (
-                <tr key={dept.id} className="table-row">
-                  <td>{index + 1}</td>
-                  <td><strong>{dept.name}</strong></td>
-                  <td>{dept.description}</td>
-                  <td>
-                    <button onClick={() => openEditModal(dept)} className="btn-edit">Edit</button>
-                    <button onClick={() => handleDelete(dept.id)} className="btn-delete">Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {departments.length === 0 && (
-            <div className="empty-state">No departments found.</div>
-          )}
-        </div>
+        <button className="add-dept-btn">+ Add New Department</button>
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <h3 className="modal-title">
-              {editItem ? 'Edit Department' : 'Add New Department'}
-            </h3>
-            {error && <div className="error-box">{error}</div>}
-            <div className="form-group">
-              <label className="form-label">Department Name *</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="e.g. Cardiology"
-                className="form-input"
-              />
+      {error && <div className="dept-error-msg">{error}</div>}
+
+      <div className="dept-grid">
+        {departments.map((dept) => (
+          <div key={dept.id} className="dept-card">
+            <div className="dept-card-info">
+              <div className="dept-icon">
+                {dept.name.charAt(0)}
+              </div>
+              <div className="dept-text">
+                <h3>{dept.name}</h3>
+                <p>{dept.description || "No description provided for this unit."}</p>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Brief description..."
-                className="form-input form-textarea"
-              />
-            </div>
-            <div className="modal-actions">
-              <button onClick={() => setShowModal(false)} className="btn-cancel">Cancel</button>
-              <button onClick={handleSave} className="btn-save">
-                {editItem ? 'Update' : 'Add Department'}
+            <div className="dept-card-actions">
+              <button className="edit-link">Edit Details</button>
+              <button 
+                className="delete-link" 
+                onClick={() => handleDelete(dept.id)}
+              >
+                Remove
               </button>
             </div>
           </div>
-        </div>
+        ))}
+      </div>
+
+      {departments.length === 0 && !error && (
+        <div className="empty-state">No departments registered yet.</div>
       )}
     </div>
   );
