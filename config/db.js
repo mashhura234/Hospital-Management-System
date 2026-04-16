@@ -1,26 +1,25 @@
-const mysql = require('mysql2');
+const sql = require('mssql');
 require('dotenv').config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+const config = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_SERVER,
+    database: process.env.DB_NAME,
+    options: {
+        encrypt: false,
+        trustServerCertificate: true
+    }
+};
 
-const db = pool.promise();
+const poolPromise = new sql.ConnectionPool(config)
+    .connect()
+    .then(pool => {
+        console.log('✅ Connected to SQL Server successfully');
+        return pool;
+    })
+    .catch(err => {
+        console.error('❌ Database connection failed:', err);
+    });
 
-// Test connection
-pool.getConnection((err, connection) => {
-  if (err) {
-    console.error('❌ Database connection failed:', err.message);
-  } else {
-    console.log('✅ Database connected successfully!');
-    connection.release();
-  }
-});
-
-module.exports = db;
+module.exports = { sql, poolPromise };
