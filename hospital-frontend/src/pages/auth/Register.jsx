@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import '../../styles/Register.css';
 
 function Register() {
   const navigate = useNavigate();
-
+  const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,11 +15,25 @@ function Register() {
     phone: '',
     age: '',
     gender: 'male',
+    department_id: '',
   });
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Fetch departments for doctor registration
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/departments');
+        setDepartments(res.data);
+      } catch (err) {
+        console.error('Failed to fetch departments');
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -30,8 +44,7 @@ function Register() {
     setError('');
     setSuccess('');
 
-    // Frontend Validation
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email || !formData.password || !formData.role) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -39,88 +52,57 @@ function Register() {
       setError('Passwords do not match.');
       return;
     }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (formData.role === 'doctor' && !formData.department_id) {
+      setError('Please select a department.');
       return;
     }
 
     try {
       setLoading(true);
 
-      // Step 1: Register user in the 'users' table
-      const registerResponse = await axios.post(
-        'http://localhost:5000/api/auth/register',
-        {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Step 1: Register in Users table
+      const registerResponse = await axios.post('http://localhost:5000/api/auth/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      });
 
       const userId = registerResponse.data.userId;
 
-      // Step 2: Login immediately to get the JWT token needed for profile creation
-      const loginResponse = await axios.post(
-        'http://localhost:5000/api/auth/login',
-        {
-          email: formData.email,
-          password: formData.password,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Step 2: Login to get token
+      const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
+        email: formData.email,
+        password: formData.password,
+      });
 
       const token = loginResponse.data.token;
-
-      // Step 3: Create specific profile (Patient or Doctor)
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
+      // Step 3: Create profile based on role
       if (formData.role === 'patient') {
-        await axios.post(
-          'http://localhost:5000/api/patients',
-          {
-            user_id: userId,
-            age: parseInt(formData.age) || 0,
-            gender: formData.gender,
-            phone: formData.phone,
-          },
-          config
-        );
+        await axios.post('http://localhost:5000/api/patients', {
+          user_id: userId,
+          age: parseInt(formData.age) || 0,
+          gender: formData.gender,
+          phone: formData.phone,
+        }, config);
       } else if (formData.role === 'doctor') {
-        await axios.post(
-          'http://localhost:5000/api/doctors',
-          {
-            user_id: userId,
-            department_id: 1, // Defaulting to 1, ensure this ID exists in your DB
-            specialization: 'General',
-            phone: formData.phone,
-          },
-          config
-        );
+        await axios.post('http://localhost:5000/api/doctors', {
+          user_id: userId,
+          department_id: parseInt(formData.department_id),
+          specialization: 'General',
+          phone: formData.phone,
+        }, config);
       }
 
       setSuccess('Registration successful! Redirecting to login...');
-      
-      // Clear storage to ensure a clean login later
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-
-      setTimeout(() => navigate('/login'), 2500);
+      setTimeout(() => navigate('/login'), 2000);
 
     } catch (err) {
-      console.error(err);
-      setError(
-        err.response?.data?.message || 'Registration failed. Please try again.'
-      );
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -139,7 +121,6 @@ function Register() {
           </p>
         </div>
       </div>
-
       <div className="register-right">
         <div className="register-card">
           <h2 className="register-title">Create Account</h2>
@@ -151,12 +132,7 @@ function Register() {
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label">Register As *</label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="form-input"
-              >
+              <select name="role" value={formData.role} onChange={handleChange} className="form-input">
                 <option value="patient">Patient</option>
                 <option value="doctor">Doctor</option>
               </select>
@@ -164,105 +140,67 @@ function Register() {
 
             <div className="form-group">
               <label className="form-label">Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={handleChange}
-                className="form-input"
-              />
+              <input type="text" name="name" placeholder="Enter Your Full Name"
+                value={formData.name} onChange={handleChange} className="form-input" required />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email Address *</label>
-              <input
-                type="email"
-                name="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleChange}
-                className="form-input"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Phone Number</label>
-              <input
-                type="text"
-                name="phone"
-                placeholder="e.g. 01XXXXXXXXX"
-                value={formData.phone}
-                onChange={handleChange}
-                className="form-input"
-              />
+              <label className="form-label">Email *</label>
+              <input type="email" name="email" placeholder="Enter Your Email"
+                value={formData.email} onChange={handleChange} className="form-input" required />
             </div>
 
             {formData.role === 'patient' && (
-              <div className="register-row">
-                <div className="form-group" style={{ flex: 1, marginRight: '10px' }}>
-                  <label className="form-label">Age</label>
-                  <input
-                    type="number"
-                    name="age"
-                    placeholder="Age"
-                    value={formData.age}
-                    onChange={handleChange}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Gender</label>
-                  <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleChange}
-                    className="form-input"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
+              <div className="register-row" style={{ display: 'flex', gap: '10px' }}>
+                <input type="number" name="age" placeholder="Age"
+                  onChange={handleChange} className="form-input" />
+                <select name="gender" onChange={handleChange} className="form-input">
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+            )}
+
+            {formData.role === 'doctor' && (
+              <div className="form-group">
+                <label className="form-label">Department *</label>
+                <select name="department_id" value={formData.department_id}
+                  onChange={handleChange} className="form-input">
+                  <option value="">Select Department</option>
+                  {departments.map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
               </div>
             )}
 
             <div className="form-group">
+              <label className="form-label">Phone Number</label>
+              <input type="text" name="phone" placeholder="e.g. 01XXXXXXXXX"
+                value={formData.phone} onChange={handleChange} className="form-input" />
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Password *</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="At least 6 characters"
-                value={formData.password}
-                onChange={handleChange}
-                className="form-input"
-              />
+              <input type="password" name="password"
+                placeholder="Use 6 Characters Password" onChange={handleChange}
+                className="form-input" required />
             </div>
 
             <div className="form-group">
               <label className="form-label">Confirm Password *</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                placeholder="Re-enter password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="form-input"
-              />
+              <input type="password" name="confirmPassword"
+                placeholder="Re-enter password" onChange={handleChange}
+                className="form-input" required />
             </div>
 
-            <button
-              type="submit"
-              className="register-btn"
-              disabled={loading}
-            >
+            <button type="submit" className="register-btn" disabled={loading}>
               {loading ? 'Creating Account...' : 'Create Account →'}
             </button>
           </form>
 
-          <p className="register-login-text">
-            Already have an account?{' '}
-            <Link to="/login" className="register-login-link">Sign in</Link>
+          <p style={{ textAlign: 'center', marginTop: '15px' }}>
+            Already have an account? <Link to="/login">Login here</Link>
           </p>
         </div>
       </div>

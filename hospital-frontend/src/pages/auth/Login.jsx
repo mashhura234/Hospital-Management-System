@@ -24,7 +24,7 @@ function Login() {
     setError('');
 
     // Validation
-    if (!formData.email || !formData.password || !formData.role) {
+    if (!formData.email || !formData.password) {
       setError('Please fill in all fields.');
       return;
     }
@@ -33,17 +33,10 @@ function Login() {
       setLoading(true);
 
       // Call backend login API
-      const response = await axios.post(
-        'http://localhost:5000/api/auth/login',
-        {
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
+        email: formData.email,
+        password: formData.password
+        
         }
       );
 
@@ -52,10 +45,10 @@ function Login() {
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
       // Navigate based on role
-      const role = response.data.user.role;
-      if (role === 'admin') {
+      const userRole = response.data.user.role.toLowerCase();
+      if (userRole === 'admin') {
         navigate('/admin/dashboard');
-      } else if (role === 'doctor') {
+      } else if (userRole === 'doctor') {
         navigate('/doctor/dashboard');
       } else {
         navigate('/patient/dashboard');
@@ -118,20 +111,6 @@ function Login() {
                 onChange={handleChange}
                 className="form-input"
               />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Login As *</label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="form-input"
-              >
-                <option value="admin">Admin</option>
-                <option value="doctor">Doctor</option>
-                <option value="patient">Patient</option>
-              </select>
             </div>
 
             <button

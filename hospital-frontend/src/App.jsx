@@ -4,20 +4,22 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageDepartments from './pages/admin/ManageDepartments';
 import ManageDoctors from './pages/admin/ManageDoctors';
 import ManagePatients from './pages/admin/ManagePatients';
 import ManageAppointments from './pages/admin/ManageAppointments';
-
-import PatientAppointmentTable from './pages/admin/PatientAppointmentTable';
 import DoctorSchedule from './pages/admin/DoctorSchedule';
+
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import DoctorPatients from './pages/doctor/DoctorPatients';
+
 import PatientDashboard from './pages/patient/PatientDashboard';
 import BookAppointment from './pages/patient/BookAppointment';
 import PatientHistory from './pages/patient/PatientHistory';
+
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -27,20 +29,25 @@ function App() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/departments" element={<ManageDepartments />} />
         <Route path="/admin/doctors" element={<ManageDoctors />} />
-       
-        <Route path="/admin/patient-appointments" element={<PatientAppointmentTable />} />
-        <Route path="/admin/doctor-schedule" element={<DoctorSchedule />} />
         <Route path="/admin/patients" element={<ManagePatients />} />
         <Route path="/admin/appointments" element={<ManageAppointments />} />
+        <Route path="/admin/doctor-schedule" element={<DoctorSchedule />} />
+
+        {/* Doctor Routes */}
         <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
         <Route path="/doctor/appointments" element={<DoctorAppointments />} />
         <Route path="/doctor/patients" element={<DoctorPatients />} />
+
+        {/* Patient Routes */}
         <Route path="/patient/dashboard" element={<PatientDashboard />} />
         <Route path="/patient/book-appointment" element={<BookAppointment />} />
         <Route path="/patient/history" element={<PatientHistory />} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

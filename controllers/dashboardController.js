@@ -6,10 +6,10 @@ const getAdminStats = async (req, res) => {
     const pool = await poolPromise;
 
     const doctors = await pool.request()
-      .query("SELECT COUNT(*) as total FROM Users WHERE role = 'doctor'");
+  .query("SELECT COUNT(*) as total FROM Doctors");
 
-    const patients = await pool.request()
-      .query("SELECT COUNT(*) as total FROM Users WHERE role = 'patient'");
+const patients = await pool.request()
+  .query("SELECT COUNT(*) as total FROM Patients");
 
     const departments = await pool.request()
       .query('SELECT COUNT(*) as total FROM Departments');

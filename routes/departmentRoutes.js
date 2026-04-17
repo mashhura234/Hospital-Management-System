@@ -11,10 +11,10 @@ const {
 const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
 
 // GET /api/departments - anyone logged in can view
-router.get('/', verifyToken, getAllDepartments);
+router.get('/',  getAllDepartments);
 
 // GET /api/departments/:id - anyone logged in can view
-router.get('/:id', verifyToken, getDepartmentById);
+router.get('/:id', getDepartmentById);
 
 // POST /api/departments - only admin can create
 router.post('/', verifyToken, verifyAdmin, createDepartment);
