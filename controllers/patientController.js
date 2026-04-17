@@ -1,15 +1,18 @@
-const db = require('../config/db');
+const { sql, poolPromise } = require('../config/db');
 
 // GET ALL PATIENTS
 const getAllPatients = async (req, res) => {
   try {
-    const [patients] = await db.query(`
-      SELECT p.id, u.name, u.email,
-             p.age, p.gender, p.phone
-      FROM patients p
-      JOIN users u ON p.user_id = u.id
-    `);
-    res.status(200).json(patients);
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .query(`
+        SELECT p.id, u.name, u.email,
+               p.age, p.gender, p.phone
+        FROM Patients p
+        JOIN Users u ON p.user_id = u.id
+      `);
+
+    res.status(200).json(result.recordset);
   } catch (error) {
     console.error('Get patients error:', error);
     res.status(500).json({ message: 'Server error. Please try again.' });
@@ -20,19 +23,23 @@ const getAllPatients = async (req, res) => {
 const getPatientById = async (req, res) => {
   try {
     const { id } = req.params;
-    const [patient] = await db.query(`
-      SELECT p.id, u.name, u.email,
-             p.age, p.gender, p.phone
-      FROM patients p
-      JOIN users u ON p.user_id = u.id
-      WHERE p.id = ?
-    `, [id]);
+    const pool = await poolPromise;
 
-    if (patient.length === 0) {
+    const result = await pool.request()
+      .input('id', sql.Int, id)
+      .query(`
+        SELECT p.id, u.name, u.email,
+               p.age, p.gender, p.phone
+        FROM Patients p
+        JOIN Users u ON p.user_id = u.id
+        WHERE p.id = @id
+      `);
+
+    if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'Patient not found.' });
     }
 
-    res.status(200).json(patient[0]);
+    res.status(200).json(result.recordset[0]);
   } catch (error) {
     console.error('Get patient error:', error);
     res.status(500).json({ message: 'Server error. Please try again.' });
@@ -44,38 +51,41 @@ const createPatient = async (req, res) => {
   try {
     const { user_id, age, gender, phone } = req.body;
 
-    // Check if all fields are provided
     if (!user_id || !age || !gender || !phone) {
       return res.status(400).json({ message: 'All fields are required.' });
     }
 
-    // Check if user exists and has patient role
-    const [user] = await db.query(
-      'SELECT * FROM users WHERE id = ? AND role = ?', [user_id, 'patient']
-    );
+    const pool = await poolPromise;
 
-    if (user.length === 0) {
+    // Check if user exists and has patient role
+    const user = await pool.request()
+      .input('user_id', sql.Int, user_id)
+      .query("SELECT * FROM Users WHERE id = @user_id AND role = 'patient'");
+
+    if (user.recordset.length === 0) {
       return res.status(404).json({ message: 'Patient user not found.' });
     }
 
     // Check if patient profile already exists
-    const [existingPatient] = await db.query(
-      'SELECT * FROM patients WHERE user_id = ?', [user_id]
-    );
+    const existingPatient = await pool.request()
+      .input('user_id', sql.Int, user_id)
+      .query('SELECT * FROM Patients WHERE user_id = @user_id');
 
-    if (existingPatient.length > 0) {
+    if (existingPatient.recordset.length > 0) {
       return res.status(400).json({ message: 'Patient profile already exists.' });
     }
 
     // Insert new patient
-    const [result] = await db.query(
-      'INSERT INTO patients (user_id, age, gender, phone) VALUES (?, ?, ?, ?)',
-      [user_id, age, gender, phone]
-    );
+    const result = await pool.request()
+      .input('user_id', sql.Int, user_id)
+      .input('age', sql.Int, age)
+      .input('gender', sql.VarChar, gender)
+      .input('phone', sql.VarChar, phone)
+      .query('INSERT INTO Patients (user_id, age, gender, phone) OUTPUT INSERTED.id VALUES (@user_id, @age, @gender, @phone)');
 
     res.status(201).json({
       message: 'Patient created successfully!',
-      patientId: result.insertId
+      patientId: result.recordset[0].id
     });
 
   } catch (error) {
@@ -90,20 +100,22 @@ const updatePatient = async (req, res) => {
     const { id } = req.params;
     const { age, gender, phone } = req.body;
 
-    // Check if patient exists
-    const [existing] = await db.query(
-      'SELECT * FROM patients WHERE id = ?', [id]
-    );
+    const pool = await poolPromise;
 
-    if (existing.length === 0) {
+    const existing = await pool.request()
+      .input('id', sql.Int, id)
+      .query('SELECT * FROM Patients WHERE id = @id');
+
+    if (existing.recordset.length === 0) {
       return res.status(404).json({ message: 'Patient not found.' });
     }
 
-    // Update patient
-    await db.query(
-      'UPDATE patients SET age = ?, gender = ?, phone = ? WHERE id = ?',
-      [age, gender, phone, id]
-    );
+    await pool.request()
+      .input('id', sql.Int, id)
+      .input('age', sql.Int, age)
+      .input('gender', sql.VarChar, gender)
+      .input('phone', sql.VarChar, phone)
+      .query('UPDATE Patients SET age = @age, gender = @gender, phone = @phone WHERE id = @id');
 
     res.status(200).json({ message: 'Patient updated successfully!' });
 
@@ -118,17 +130,19 @@ const deletePatient = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if patient exists
-    const [existing] = await db.query(
-      'SELECT * FROM patients WHERE id = ?', [id]
-    );
+    const pool = await poolPromise;
 
-    if (existing.length === 0) {
+    const existing = await pool.request()
+      .input('id', sql.Int, id)
+      .query('SELECT * FROM Patients WHERE id = @id');
+
+    if (existing.recordset.length === 0) {
       return res.status(404).json({ message: 'Patient not found.' });
     }
 
-    // Delete patient
-    await db.query('DELETE FROM patients WHERE id = ?', [id]);
+    await pool.request()
+      .input('id', sql.Int, id)
+      .query('DELETE FROM Patients WHERE id = @id');
 
     res.status(200).json({ message: 'Patient deleted successfully!' });
 

@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const { sql, poolPromise } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
@@ -16,12 +16,14 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'All fields are required.' });
     }
 
-    // Check if email already exists in database
-    const [existingUser] = await db.query(
-      'SELECT * FROM users WHERE email = ?', [email]
-    );
+     const pool = await poolPromise;
 
-    if (existingUser.length > 0) {
+    // Check if email already exists in database
+      const existingUser = await pool.request()
+      .input('email', sql.VarChar, email)
+      .query('SELECT * FROM Users WHERE email = @email');
+
+    if (existingUser.recordset.length > 0) {
       return res.status(400).json({ message: 'Email already registered.' });
     }
 
@@ -29,15 +31,19 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Save new user to database
-    const [result] = await db.query(
-      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      [name, email, hashedPassword, role]
-    );
+    const result = await pool.request()
+      .input('name', sql.VarChar, name)
+      .input('email', sql.VarChar, email)
+      .input('password', sql.VarChar, hashedPassword)
+      .input('role', sql.VarChar, role)
+      .query('INSERT INTO Users (name, email, password, role) OUTPUT INSERTED.id VALUES (@name, @email, @password, @role)'
+      
+      );
 
     // Send success response
     res.status(201).json({
       message: 'User registered successfully!',
-      userId: result.insertId
+      userId: result.recordset[0].id
     });
 
   } catch (error) {
@@ -58,18 +64,20 @@ const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required.' });
     }
+      const pool = await poolPromise;
 
-    // Find user by email in database
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE email = ?', [email]
+    // Find user by email
+    const result = await pool.request()
+      .input('email', sql.VarChar, email)
+      .query('SELECT * FROM Users WHERE email = @email'
     );
 
     // If no user found
-    if (users.length === 0) {
+    if (result.recordset.length === 0) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    const user = users[0];
+    const user = result.recordset[0];
 
     // Compare entered password with hashed password in database
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -111,16 +119,18 @@ const getCurrentUser = async (req, res) => {
     // req.user is populated by verifyToken middleware
     const userId = req.user.id;
 
-    // Fetch fresh user data from database
-    const [users] = await db.query(
-      'SELECT id, name, email, role FROM users WHERE id = ?', [userId]
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input('id', sql.Int, userId)
+      .query('SELECT id, name, email, role FROM Users WHERE id = @id'
     );
 
-    if (users.length === 0) {
+    if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const user = users[0];
+    const user = result.recordset[0];
 
     res.status(200).json({
       message: 'User data retrieved successfully!',

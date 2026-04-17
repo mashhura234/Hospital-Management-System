@@ -28,6 +28,7 @@ const doctorRoutes = require('./routes/doctorRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const availabilityRoutes = require('./routes/availabilityRoutes');
 
 // 7. ROUTES
 app.use('/api/auth', authRoutes);
@@ -36,6 +37,7 @@ app.use('/api/doctors', doctorRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/availability', availabilityRoutes);
 
 // 8. TEST ROUTE
 app.get('/', (req, res) => {

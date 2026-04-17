@@ -1,66 +1,55 @@
-const db = require('../config/db');
-
+const { sql, poolPromise } = require('../config/db');
 
 // ADMIN DASHBOARD STATS
 const getAdminStats = async (req, res) => {
   try {
-    // Count doctors from users table with role='doctor'
-    const [doctors] = await db.query(
-      'SELECT COUNT(*) as total FROM users WHERE role = ?', ['doctor']
-    );
-    
-    // Count patients from users table with role='patient'
-    const [patients] = await db.query(
-      'SELECT COUNT(*) as total FROM users WHERE role = ?', ['patient']
-    );
-    
-    // Total departments
-    const [departments] = await db.query('SELECT COUNT(*) as total FROM departments');
-    
-    // Total appointments
-    const [appointments] = await db.query('SELECT COUNT(*) as total FROM appointments');
-    
-    // Pending appointments
-    const [pending] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE status = ?', ['scheduled']
-    );
-    
-    // Completed appointments
-    const [completed] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE status = ?', ['completed']
-    );
-    
-    // Cancelled appointments
-    const [cancelled] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE status = ?', ['cancelled']
-    );
+    const pool = await poolPromise;
 
-    // Recent appointments with proper column names
-    const [recentAppointments] = await db.query(`
-      SELECT a.id,
-             u_patient.name AS patient_name,
-             u_doctor.name AS doctor_name,
-             a.appointment_date AS date,
-             a.appointment_time AS time,
-             a.status
-      FROM appointments a
-      JOIN patients p ON a.patient_id = p.id
-      JOIN users u_patient ON p.user_id = u_patient.id
-      JOIN doctors d ON a.doctor_id = d.id
-      JOIN users u_doctor ON d.user_id = u_doctor.id
-      ORDER BY a.appointment_date DESC, a.appointment_time DESC
-      LIMIT 5
-    `);
+    const doctors = await pool.request()
+      .query("SELECT COUNT(*) as total FROM Users WHERE role = 'doctor'");
+
+    const patients = await pool.request()
+      .query("SELECT COUNT(*) as total FROM Users WHERE role = 'patient'");
+
+    const departments = await pool.request()
+      .query('SELECT COUNT(*) as total FROM Departments');
+
+    const appointments = await pool.request()
+      .query('SELECT COUNT(*) as total FROM Appointments');
+
+    const pending = await pool.request()
+      .query("SELECT COUNT(*) as total FROM Appointments WHERE status = 'pending'");
+
+    const completed = await pool.request()
+      .query("SELECT COUNT(*) as total FROM Appointments WHERE status = 'completed'");
+
+    const cancelled = await pool.request()
+      .query("SELECT COUNT(*) as total FROM Appointments WHERE status = 'cancelled'");
+
+    const recentAppointments = await pool.request()
+      .query(`
+        SELECT TOP 5
+               a.id,
+               u_patient.name AS patient_name,
+               u_doctor.name AS doctor_name,
+               a.date, a.time, a.status
+        FROM Appointments a
+        JOIN Patients p ON a.patient_id = p.id
+        JOIN Users u_patient ON p.user_id = u_patient.id
+        JOIN Doctors d ON a.doctor_id = d.id
+        JOIN Users u_doctor ON d.user_id = u_doctor.id
+        ORDER BY a.date DESC, a.time DESC
+      `);
 
     res.status(200).json({
-      totalDoctors: doctors[0].total,
-      totalPatients: patients[0].total,
-      totalDepartments: departments[0].total,
-      totalAppointments: appointments[0].total,
-      pendingAppointments: pending[0].total,
-      completedAppointments: completed[0].total,
-      cancelledAppointments: cancelled[0].total,
-      recentAppointments
+      totalDoctors: doctors.recordset[0].total,
+      totalPatients: patients.recordset[0].total,
+      totalDepartments: departments.recordset[0].total,
+      totalAppointments: appointments.recordset[0].total,
+      pendingAppointments: pending.recordset[0].total,
+      completedAppointments: completed.recordset[0].total,
+      cancelledAppointments: cancelled.recordset[0].total,
+      recentAppointments: recentAppointments.recordset
     });
 
   } catch (error) {
@@ -69,65 +58,57 @@ const getAdminStats = async (req, res) => {
   }
 };
 
-
 // DOCTOR DASHBOARD STATS
 const getDoctorStats = async (req, res) => {
   try {
-    // Get doctor profile using logged in user id
-    const [doctor] = await db.query(
-      'SELECT * FROM doctors WHERE user_id = ?', [req.user.id]
-    );
+    const pool = await poolPromise;
 
-    if (doctor.length === 0) {
+    const doctor = await pool.request()
+      .input('user_id', sql.Int, req.user.id)
+      .query('SELECT * FROM Doctors WHERE user_id = @user_id');
+
+    if (doctor.recordset.length === 0) {
       return res.status(404).json({ message: 'Doctor profile not found.' });
     }
 
-    const doctorId = doctor[0].id;
+    const doctorId = doctor.recordset[0].id;
 
-    // Total appointments for this doctor
-    const [totalAppointments] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE doctor_id = ?', [doctorId]
-    );
+    const totalAppointments = await pool.request()
+      .input('doctor_id', sql.Int, doctorId)
+      .query('SELECT COUNT(*) as total FROM Appointments WHERE doctor_id = @doctor_id');
 
-    // Today's appointments
-    const [todayAppointments] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE doctor_id = ? AND date = CURDATE()',
-      [doctorId]
-    );
+    const todayAppointments = await pool.request()
+      .input('doctor_id', sql.Int, doctorId)
+      .query('SELECT COUNT(*) as total FROM Appointments WHERE doctor_id = @doctor_id AND date = CAST(GETDATE() AS DATE)');
 
-    // Pending appointments
-    const [pending] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE doctor_id = ? AND status = ?',
-      [doctorId, 'pending']
-    );
+    const pending = await pool.request()
+      .input('doctor_id', sql.Int, doctorId)
+      .query("SELECT COUNT(*) as total FROM Appointments WHERE doctor_id = @doctor_id AND status = 'pending'");
 
-    // Completed appointments
-    const [completed] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE doctor_id = ? AND status = ?',
-      [doctorId, 'completed']
-    );
+    const completed = await pool.request()
+      .input('doctor_id', sql.Int, doctorId)
+      .query("SELECT COUNT(*) as total FROM Appointments WHERE doctor_id = @doctor_id AND status = 'completed'");
 
-    // Recent appointments
-    const [recentAppointments] = await db.query(`
-      SELECT a.id,
-             u_patient.name AS patient_name,
-             a.appointment_date AS date,
-             a.appointment_time AS time,
-             a.status
-      FROM appointments a
-      JOIN patients p ON a.patient_id = p.id
-      JOIN users u_patient ON p.user_id = u_patient.id
-      WHERE a.doctor_id = ?
-      ORDER BY a.appointment_date DESC, a.appointment_time DESC
-      LIMIT 5
-    `, [doctorId]);
+    const recentAppointments = await pool.request()
+      .input('doctor_id', sql.Int, doctorId)
+      .query(`
+        SELECT TOP 5
+               a.id,
+               u_patient.name AS patient_name,
+               a.date, a.time, a.status
+        FROM Appointments a
+        JOIN Patients p ON a.patient_id = p.id
+        JOIN Users u_patient ON p.user_id = u_patient.id
+        WHERE a.doctor_id = @doctor_id
+        ORDER BY a.date DESC, a.time DESC
+      `);
 
     res.status(200).json({
-      totalAppointments: totalAppointments[0].total,
-      todayAppointments: todayAppointments[0].total,
-      pendingAppointments: pending[0].total,
-      completedAppointments: completed[0].total,
-      recentAppointments
+      totalAppointments: totalAppointments.recordset[0].total,
+      todayAppointments: todayAppointments.recordset[0].total,
+      pendingAppointments: pending.recordset[0].total,
+      completedAppointments: completed.recordset[0].total,
+      recentAppointments: recentAppointments.recordset
     });
 
   } catch (error) {
@@ -136,60 +117,54 @@ const getDoctorStats = async (req, res) => {
   }
 };
 
-
 // PATIENT DASHBOARD STATS
 const getPatientStats = async (req, res) => {
   try {
-    // Get patient profile using logged in user id
-    const [patient] = await db.query(
-      'SELECT * FROM patients WHERE user_id = ?', [req.user.id]
-    );
+    const pool = await poolPromise;
 
-    if (patient.length === 0) {
+    const patient = await pool.request()
+      .input('user_id', sql.Int, req.user.id)
+      .query('SELECT * FROM Patients WHERE user_id = @user_id');
+
+    if (patient.recordset.length === 0) {
       return res.status(404).json({ message: 'Patient profile not found.' });
     }
 
-    const patientId = patient[0].id;
+    const patientId = patient.recordset[0].id;
 
-    // Total appointments
-    const [totalAppointments] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE patient_id = ?', [patientId]
-    );
+    const totalAppointments = await pool.request()
+      .input('patient_id', sql.Int, patientId)
+      .query('SELECT COUNT(*) as total FROM Appointments WHERE patient_id = @patient_id');
 
-    // Upcoming appointments
-    const [upcoming] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE patient_id = ? AND date >= CURDATE() AND status = ?',
-      [patientId, 'pending']
-    );
+    const upcoming = await pool.request()
+      .input('patient_id', sql.Int, patientId)
+      .query("SELECT COUNT(*) as total FROM Appointments WHERE patient_id = @patient_id AND date >= CAST(GETDATE() AS DATE) AND status = 'pending'");
 
-    // Completed appointments
-    const [completed] = await db.query(
-      'SELECT COUNT(*) as total FROM appointments WHERE patient_id = ? AND status = ?',
-      [patientId, 'completed']
-    );
+    const completed = await pool.request()
+      .input('patient_id', sql.Int, patientId)
+      .query("SELECT COUNT(*) as total FROM Appointments WHERE patient_id = @patient_id AND status = 'completed'");
 
-    // Appointment history
-    const [appointmentHistory] = await db.query(`
-      SELECT a.id,
-             u_doctor.name AS doctor_name,
-             dept.name AS department_name,
-             a.appointment_date AS date,
-             a.appointment_time AS time,
-             a.status
-      FROM appointments a
-      JOIN doctors d ON a.doctor_id = d.id
-      JOIN users u_doctor ON d.user_id = u_doctor.id
-      JOIN departments dept ON d.department_id = dept.id
-      WHERE a.patient_id = ?
-      ORDER BY a.appointment_date DESC, a.appointment_time DESC
-      LIMIT 5
-    `, [patientId]);
+    const appointmentHistory = await pool.request()
+      .input('patient_id', sql.Int, patientId)
+      .query(`
+        SELECT TOP 5
+               a.id,
+               u_doctor.name AS doctor_name,
+               dept.name AS department_name,
+               a.date, a.time, a.status
+        FROM Appointments a
+        JOIN Doctors d ON a.doctor_id = d.id
+        JOIN Users u_doctor ON d.user_id = u_doctor.id
+        JOIN Departments dept ON d.department_id = dept.id
+        WHERE a.patient_id = @patient_id
+        ORDER BY a.date DESC, a.time DESC
+      `);
 
     res.status(200).json({
-      totalAppointments: totalAppointments[0].total,
-      upcomingAppointments: upcoming[0].total,
-      completedAppointments: completed[0].total,
-      appointmentHistory
+      totalAppointments: totalAppointments.recordset[0].total,
+      upcomingAppointments: upcoming.recordset[0].total,
+      completedAppointments: completed.recordset[0].total,
+      appointmentHistory: appointmentHistory.recordset
     });
 
   } catch (error) {
