@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from '../../components/Sidebar';
+import '../../styles/DoctorAppointments.css';
 
 function DoctorAppointments() {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ function DoctorAppointments() {
         available_time: formatTime(slotForm.available_time),
         available_end_time: formatTime(slotForm.available_end_time)
       }, { headers: { Authorization: `Bearer ${token}` } });
-      setSlotSuccess('✅ Slot added successfully!');
+      setSlotSuccess('Slot added successfully!');
       setSlotForm({ available_date: '', available_time: '', available_end_time: '' });
       fetchMyAvailability();
       setTimeout(() => setSlotSuccess(''), 3000);
@@ -98,25 +99,13 @@ function DoctorAppointments() {
     }
   };
 
-  const getSelectStyle = (status) => {
-    const styles = {
-      pending: { backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b' },
-      completed: { backgroundColor: '#d1fae5', color: '#065f46', border: '1px solid #22c55e' },
-      cancelled: { backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' },
+  const getStatusClass = (status) => {
+    const map = {
+      pending: 'select-status-pending',
+      completed: 'select-status-completed',
+      cancelled: 'select-status-cancelled'
     };
-    return { ...styles[status?.toLowerCase()], borderRadius: '6px', padding: '4px 8px', fontWeight: '600', cursor: 'pointer' };
-  };
-
-  const tabStyle = (tab) => ({
-    padding: '10px 24px', borderRadius: '8px', border: 'none',
-    cursor: 'pointer', fontWeight: '600',
-    background: activeTab === tab ? '#0d9488' : '#e2e8f0',
-    color: activeTab === tab ? 'white' : '#333'
-  });
-
-  const inputStyle = {
-    padding: '8px 12px', borderRadius: '6px',
-    border: '1px solid #cbd5e1', fontSize: '14px'
+    return map[status?.toLowerCase()] || 'select-status-pending';
   };
 
   return (
@@ -130,17 +119,19 @@ function DoctorAppointments() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <button onClick={() => setActiveTab('appointments')} style={tabStyle('appointments')}>
+        <div className="tab-container">
+          <button
+            className={`tab-btn ${activeTab === 'appointments' ? 'tab-btn-active' : 'tab-btn-inactive'}`}
+            onClick={() => setActiveTab('appointments')}>
             📋 My Appointments
           </button>
-          <button onClick={() => setActiveTab('availability')} style={tabStyle('availability')}>
+          <button
+            className={`tab-btn ${activeTab === 'availability' ? 'tab-btn-active' : 'tab-btn-inactive'}`}
+            onClick={() => setActiveTab('availability')}>
             📅 My Availability Slots
           </button>
         </div>
 
-        {/* Appointments Tab */}
         {activeTab === 'appointments' && (
           <div className="table-card">
             {loading ? <p className="loading-text">Loading...</p> : (
@@ -155,7 +146,12 @@ function DoctorAppointments() {
                   {appointments.length > 0 ? appointments.map((appt, i) => (
                     <tr key={appt.id} className="table-row">
                       <td>{i + 1}</td>
-                      <td><strong>{appt.patient_name}</strong></td>
+                      <td>
+                        <div className="patient-name-cell">
+                          <div className="patient-avatar-sm">{appt.patient_name?.[0]}</div>
+                          <strong>{appt.patient_name}</strong>
+                        </div>
+                      </td>
                       <td>{new Date(appt.date).toLocaleDateString()}</td>
                       <td>{appt.time}</td>
                       <td>
@@ -167,7 +163,7 @@ function DoctorAppointments() {
                         <select
                           value={appt.status?.toLowerCase()}
                           onChange={(e) => handleStatusChange(appt.id, e.target.value)}
-                          style={getSelectStyle(appt.status)}>
+                          className={getStatusClass(appt.status)}>
                           <option value="pending">Pending</option>
                           <option value="completed">Completed</option>
                           <option value="cancelled">Cancelled</option>
@@ -183,59 +179,51 @@ function DoctorAppointments() {
           </div>
         )}
 
-        {/* Availability Tab */}
         {activeTab === 'availability' && (
           <div>
-            {/* Add Slot Form */}
-            <div className="table-card" style={{ marginBottom: '20px' }}>
-              <h3 style={{ marginBottom: '16px', color: '#0d9488' }}>➕ Add New Availability Slot</h3>
-              {slotError && <div style={{ color: 'red', marginBottom: '10px', padding: '8px', background: '#fee2e2', borderRadius: '6px' }}>{slotError}</div>}
-              {slotSuccess && <div style={{ color: 'green', marginBottom: '10px', padding: '8px', background: '#d1fae5', borderRadius: '6px' }}>{slotSuccess}</div>}
-
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px' }}>📅 Date</label>
+            <div className="slot-form-card">
+              <h3 className="slot-form-title">➕ Add New Availability Slot</h3>
+              {slotError && <div className="slot-error">{slotError}</div>}
+              {slotSuccess && <div className="slot-success">{slotSuccess}</div>}
+              <div className="slot-form-row">
+                <div className="slot-form-group">
+                  <label className="slot-form-label">📅 Date</label>
                   <input
                     type="date"
                     value={slotForm.available_date}
                     min={new Date().toISOString().split('T')[0]}
                     onChange={e => setSlotForm({ ...slotForm, available_date: e.target.value })}
-                    style={inputStyle}
+                    className="slot-form-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px' }}>⏰ Start Time</label>
+                <div className="slot-form-group">
+                  <label className="slot-form-label">⏰ Start Time</label>
                   <input
                     type="time"
                     value={slotForm.available_time}
                     onChange={e => setSlotForm({ ...slotForm, available_time: e.target.value })}
-                    style={inputStyle}
+                    className="slot-form-input"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px' }}>⏰ End Time</label>
+                <div className="slot-form-group">
+                  <label className="slot-form-label">⏰ End Time</label>
                   <input
                     type="time"
                     value={slotForm.available_end_time}
                     onChange={e => setSlotForm({ ...slotForm, available_end_time: e.target.value })}
-                    style={inputStyle}
+                    className="slot-form-input"
                   />
                 </div>
-                <button
-                  onClick={handleAddSlot}
-                  style={{
-                    padding: '8px 24px', backgroundColor: '#0d9488',
-                    color: 'white', border: 'none', borderRadius: '6px',
-                    fontWeight: '600', cursor: 'pointer', height: '38px'
-                  }}>
+                <button className="slot-add-btn" onClick={handleAddSlot}>
                   ➕ Add Slot
                 </button>
               </div>
             </div>
 
-            {/* Slots Table */}
             <div className="table-card">
-              <h3 style={{ marginBottom: '16px', color: '#0d9488' }}>📋 My Availability Slots</h3>
+              <div className="table-header">
+                <h3 className="table-title">📋 My Availability Slots</h3>
+              </div>
               <table className="data-table">
                 <thead>
                   <tr className="table-head-row">
@@ -251,23 +239,13 @@ function DoctorAppointments() {
                       <td>{slot.available_time}</td>
                       <td>{slot.available_end_time || '-'}</td>
                       <td>
-                        <span style={{
-                          padding: '3px 10px', borderRadius: '12px', fontSize: '12px',
-                          background: slot.is_booked ? '#fee2e2' : '#d1fae5',
-                          color: slot.is_booked ? '#991b1b' : '#065f46'
-                        }}>
+                        <span className={slot.is_booked ? 'slot-status-booked' : 'slot-status-available'}>
                           {slot.is_booked ? '🔴 Booked' : '🟢 Available'}
                         </span>
                       </td>
                       <td>
                         {!slot.is_booked && (
-                          <button
-                            onClick={() => handleDeleteSlot(slot.id)}
-                            style={{
-                              padding: '4px 12px', backgroundColor: '#ef4444',
-                              color: 'white', border: 'none', borderRadius: '6px',
-                              cursor: 'pointer', fontSize: '12px'
-                            }}>
+                          <button className="btn-delete-slot" onClick={() => handleDeleteSlot(slot.id)}>
                             Delete
                           </button>
                         )}

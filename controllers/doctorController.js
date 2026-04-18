@@ -109,7 +109,7 @@ const createDoctor = async (req, res) => {
 const updateDoctor = async (req, res) => {
   try {
     const { id } = req.params;
-    const { department_id, specialization, phone, degrees, name } = req.body;
+    const { specialization, phone, degrees, name } = req.body;
     const pool = await poolPromise;
 
     const existing = await pool.request()
@@ -118,6 +118,12 @@ const updateDoctor = async (req, res) => {
 
     if (existing.recordset.length === 0) {
       return res.status(404).json({ message: 'Doctor not found.' });
+    }
+
+    // Check authorization - only the doctor themselves or admin can update
+    const doctorUserId = existing.recordset[0].user_id;
+    if (req.user.id !== doctorUserId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'You can only update your own profile.' });
     }
 
     // Update doctor profile
@@ -130,14 +136,13 @@ const updateDoctor = async (req, res) => {
 
     // Update name in Users table if provided
     if (name) {
-      const doctorData = existing.recordset[0];
       await pool.request()
-        .input('user_id', sql.Int, doctorData.user_id)
+        .input('user_id', sql.Int, doctorUserId)
         .input('name', sql.VarChar, name)
         .query('UPDATE Users SET name = @name WHERE id = @user_id');
     }
 
-    res.status(200).json({ message: 'Doctor profile updated successfully!' });
+    res.status(200).json({ message: 'Profile updated successfully!' });
   } catch (error) {
     console.error('Update doctor error:', error);
     res.status(500).json({ message: 'Server error. Please try again.' });
