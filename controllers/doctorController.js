@@ -109,7 +109,7 @@ const createDoctor = async (req, res) => {
 const updateDoctor = async (req, res) => {
   try {
     const { id } = req.params;
-    const { department_id, specialization, phone } = req.body;
+    const { department_id, specialization, phone, degrees, name } = req.body;
     const pool = await poolPromise;
 
     const existing = await pool.request()
@@ -120,14 +120,24 @@ const updateDoctor = async (req, res) => {
       return res.status(404).json({ message: 'Doctor not found.' });
     }
 
+    // Update doctor profile
     await pool.request()
       .input('id', sql.Int, id)
-      .input('department_id', sql.Int, department_id)
       .input('specialization', sql.VarChar, specialization)
       .input('phone', sql.VarChar, phone)
-      .query('UPDATE Doctors SET department_id = @department_id, specialization = @specialization, phone = @phone WHERE id = @id');
+      .input('degrees', sql.VarChar, degrees || '')
+      .query('UPDATE Doctors SET specialization = @specialization, phone = @phone, degrees = @degrees WHERE id = @id');
 
-    res.status(200).json({ message: 'Doctor updated successfully!' });
+    // Update name in Users table if provided
+    if (name) {
+      const doctorData = existing.recordset[0];
+      await pool.request()
+        .input('user_id', sql.Int, doctorData.user_id)
+        .input('name', sql.VarChar, name)
+        .query('UPDATE Users SET name = @name WHERE id = @user_id');
+    }
+
+    res.status(200).json({ message: 'Doctor profile updated successfully!' });
   } catch (error) {
     console.error('Update doctor error:', error);
     res.status(500).json({ message: 'Server error. Please try again.' });

@@ -1,0 +1,225 @@
+/* ============================================
+   DOCTOR APPOINTMENTS PAGE
+   ============================================ */
+
+.tab-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.tab-btn-active {
+  background: #0d9488;
+  color: white;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+.tab-btn-inactive {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.tab-btn-inactive:hover {
+  background: #e5e7eb;
+}
+
+.slot-form-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f3f4f6;
+  margin-bottom: 20px;
+}
+
+.slot-form-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0d9488;
+  margin-bottom: 16px;
+}
+
+.slot-form-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.slot-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slot-form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.slot-form-input {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  color: #1f2937;
+  transition: border-color 0.2s ease;
+}
+
+.slot-form-input:focus {
+  outline: none;
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.slot-add-btn {
+  padding: 9px 24px;
+  background: #0d9488;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  height: 38px;
+}
+
+.slot-add-btn:hover {
+  background: #0f7860;
+  transform: translateY(-1px);
+}
+
+.slot-error {
+  color: #991b1b;
+  background: #fee2e2;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  border-left: 3px solid #ef4444;
+}
+
+.slot-success {
+  color: #065f46;
+  background: #d1fae5;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  border-left: 3px solid #10b981;
+}
+
+.slot-status-available {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #d1fae5;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.slot-status-booked {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.btn-delete-slot {
+  padding: 4px 12px;
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-slot:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.select-status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.select-status-completed {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #22c55e;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.select-status-cancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Patient Name Cell */
+.patient-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.patient-avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e8f5f2;
+  color: #0d9488;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .slot-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .slot-add-btn {
+    width: 100%;
+    height: auto;
+    padding: 10px;
+  }
+
+  .tab-container {
+    flex-direction: column;
+  }
+}

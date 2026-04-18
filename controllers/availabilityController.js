@@ -3,30 +3,36 @@ const { sql, poolPromise } = require('../config/db');
 // DOCTOR ADDS AVAILABLE SLOT
 const addAvailability = async (req, res) => {
   try {
-    const { available_date, available_time } = req.body;
+    const { available_date, available_time, available_end_time } = req.body;
 
-    if (!available_date || !available_time) {
-      return res.status(400).json({ message: 'Date and time are required.' });
+    if (!available_date || !available_time || !available_end_time) {
+      return res.status(400).json({ message: 'Date, start time and end time are required.' });
     }
+
+    const formatTime = (t) => {
+      const parts = t.split(':');
+      return parts.length === 2 ? `${t}:00` : t;
+    };
+
+    const formattedStart = formatTime(available_time);
+    const formattedEnd = formatTime(available_end_time);
 
     const pool = await poolPromise;
 
-    // Get doctor profile from logged in user
     const doctor = await pool.request()
       .input('user_id', sql.Int, req.user.id)
       .query('SELECT * FROM Doctors WHERE user_id = @user_id');
 
     if (doctor.recordset.length === 0) {
-      return res.status(404).json({ message: 'Doctor profile not found.' });
+      return res.status(404).json({ message: 'Doctor profile not found. Please contact admin.' });
     }
 
     const doctorId = doctor.recordset[0].id;
 
-    // Check if slot already exists
     const existing = await pool.request()
       .input('doctor_id', sql.Int, doctorId)
       .input('available_date', sql.Date, available_date)
-      .input('available_time', sql.Time, available_time)
+      .input('available_time', sql.VarChar, formattedStart)
       .query(`
         SELECT * FROM DoctorAvailability
         WHERE doctor_id = @doctor_id
@@ -38,15 +44,15 @@ const addAvailability = async (req, res) => {
       return res.status(400).json({ message: 'This slot already exists.' });
     }
 
-    // Add new slot
     const result = await pool.request()
       .input('doctor_id', sql.Int, doctorId)
       .input('available_date', sql.Date, available_date)
-      .input('available_time', sql.Time, available_time)
+      .input('available_time', sql.VarChar, formattedStart)
+      .input('available_end_time', sql.VarChar, formattedEnd)
       .query(`
-        INSERT INTO DoctorAvailability (doctor_id, available_date, available_time, is_booked)
+        INSERT INTO DoctorAvailability (doctor_id, available_date, available_time, available_end_time, is_booked)
         OUTPUT INSERTED.id
-        VALUES (@doctor_id, @available_date, @available_time, 0)
+        VALUES (@doctor_id, @available_date, @available_time, @available_end_time, 0)
       `);
 
     res.status(201).json({
@@ -69,7 +75,7 @@ const getDoctorAvailability = async (req, res) => {
     const result = await pool.request()
       .input('doctor_id', sql.Int, doctor_id)
       .query(`
-        SELECT da.id, da.available_date, da.available_time, da.is_booked,
+        SELECT da.id, da.available_date, da.available_time, da.available_end_time, da.is_booked,
                u.name AS doctor_name,
                dept.name AS department_name,
                d.specialization
@@ -90,7 +96,7 @@ const getDoctorAvailability = async (req, res) => {
   }
 };
 
-// GET MY AVAILABILITY SLOTS (for doctor to manage their own slots)
+// GET MY AVAILABILITY SLOTS
 const getMyAvailability = async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -120,7 +126,7 @@ const getMyAvailability = async (req, res) => {
   }
 };
 
-// DELETE AVAILABILITY SLOT (doctor removes a slot)
+// DELETE AVAILABILITY SLOT
 const deleteAvailability = async (req, res) => {
   try {
     const { id } = req.params;
@@ -134,7 +140,6 @@ const deleteAvailability = async (req, res) => {
       return res.status(404).json({ message: 'Slot not found.' });
     }
 
-    // Don't allow deleting already booked slots
     if (existing.recordset[0].is_booked === true) {
       return res.status(400).json({ message: 'Cannot delete a booked slot.' });
     }

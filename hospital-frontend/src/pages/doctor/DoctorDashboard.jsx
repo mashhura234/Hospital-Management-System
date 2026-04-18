@@ -7,117 +7,121 @@ import '../../styles/DoctorDashboard.css';
 function DoctorDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [appointments, setAppointments] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Get user and token from localStorage
     const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-
-    if (!token || !storedUser) {
-      navigate('/login');
-      return;
-    }
-
+    if (!token || !storedUser) { navigate('/login'); return; }
     try {
       const parsedUser = JSON.parse(storedUser);
+      if (parsedUser.role !== 'doctor') { navigate('/login'); return; }
       setUser(parsedUser);
-
-      // Fetch doctor's appointments
-      getBackendData(token);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      navigate('/login');
-    }
+      fetchStats();
+    } catch { navigate('/login'); }
   }, [navigate]);
 
-  const getBackendData = async (token) => {
+  const fetchStats = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/appointments', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setAppointments(response.data);
-    } catch (error) {
-      console.error("Fetch error:", error);
-    } finally {
+      const res = await axios.get('http://localhost:5000/api/dashboard/doctor',
+        { headers: { Authorization: `Bearer ${token}` } });
+      setStats(res.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Dashboard error:', err);
       setLoading(false);
     }
   };
 
-  // 3. Logic for the Stat Cards
-  const totalCount = appointments.length;
-  const completedCount = appointments.filter(a => a.status?.toLowerCase() === 'completed').length;
-  const pendingCount = appointments.filter(a => a.status?.toLowerCase() === 'pending').length;
+  const statCards = [
+    { label: 'Total Appointments', value: stats?.totalAppointments || 0, icon: '📅', color: '#0d9488' },
+    { label: "Today's Appointments", value: stats?.todayAppointments || 0, icon: '🗓️', color: '#3b82f6' },
+    { label: 'Pending', value: stats?.pendingAppointments || 0, icon: '⏳', color: '#f59e0b' },
+    { label: 'Completed', value: stats?.completedAppointments || 0, icon: '✅', color: '#22c55e' },
+  ];
 
   return (
     <div className="dashboard-layout">
-      <Sidebar role={user?.role || 'doctor'} userName={user?.name} />
+      <Sidebar role="doctor" userName={user?.name} />
       <div className="dashboard-main">
+
+        {/* Header */}
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Doctor Dashboard</h1>
-            <p className="dashboard-subtitle">Welcome, {user?.name}! Real-time appointment data.</p>
+            <p className="dashboard-subtitle">Welcome, {user?.name}!</p>
           </div>
-          <div className="dashboard-date">📅 {new Date().toDateString()}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="dashboard-date">📅 {new Date().toDateString()}</div>
+            
+          </div>
         </div>
 
-        {/* Dynamic Stats */}
+        {/* Stat Cards */}
         <div className="doctor-stats">
-          <div className="doctor-stat-card" style={{ borderTop: '4px solid #0d9488' }}>
-            <div className="stat-value">{loading ? "..." : totalCount}</div>
-            <div className="stat-label">Today's Appointments</div>
-          </div>
-          <div className="doctor-stat-card" style={{ borderTop: '4px solid #3b82f6' }}>
-            <div className="stat-value">{loading ? "..." : completedCount}</div>
-            <div className="stat-label">Completed</div>
-          </div>
-          <div className="doctor-stat-card" style={{ borderTop: '4px solid #f59e0b' }}>
-            <div className="stat-value">{loading ? "..." : pendingCount}</div>
-            <div className="stat-label">Pending</div>
-          </div>
+          {statCards.map((stat, i) => (
+            <div
+              key={i}
+              className="doctor-stat-card"
+              style={{ borderTop: `4px solid ${stat.color}`, cursor: 'pointer' }}
+              onClick={() => navigate('/doctor/appointments')}
+              title="Click to view appointments"
+            >
+              <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
+              <div className="stat-value">{loading ? '...' : stat.value}</div>
+              <div className="stat-label">{stat.label}</div>
+            </div>
+          ))}
         </div>
 
+        {/* Recent Appointments Table */}
         <div className="table-card">
           <div className="table-header">
-            <h2 className="table-title">Today's Appointments</h2>
+            <h2 className="table-title">Recent Appointments</h2>
+            <button
+              onClick={() => navigate('/doctor/appointments')}
+              style={{
+                padding: '6px 16px',
+                backgroundColor: '#0d948820',
+                color: '#0d9488',
+                border: '1px solid #0d9488',
+                borderRadius: '6px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '13px'
+              }}>
+              View All →
+            </button>
           </div>
-          
-          {loading ? (
-            <p className="p-5">Connecting to database...</p>
-          ) : (
+
+          {loading ? <p className="loading-text">Loading...</p> : (
             <table className="data-table">
               <thead>
                 <tr className="table-head-row">
-                  <th>#</th>
-                  <th>Patient Name</th>
-                  <th>Time</th>
-                  <th>Status</th>
+                  <th>#</th><th>Patient</th><th>Date</th><th>Time</th><th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appt, i) => (
-              <tr key={appt.id} className="table-row">
-             <td>{i + 1}</td>
-             {/* Notice we use appt.patient_name because of your SQL query */}
-              <td><strong>{appt.patient_name}</strong></td> 
-    
-            {/* Formatting the date and time from your DB */}
-           <td>{appt.time} ({new Date(appt.date).toLocaleDateString()})</td>
-    
-          <td>
-           <span className={`status-badge status-${appt.status.toLowerCase()}`}>
-        {appt.status}
-          </span>
-           </td>
-           </tr>
-           ))}
+                {stats?.recentAppointments?.length > 0 ? (
+                  stats.recentAppointments.map((appt, i) => (
+                    <tr key={appt.id} className="table-row">
+                      <td>{i + 1}</td>
+                      <td><strong>{appt.patient_name}</strong></td>
+                      <td>{new Date(appt.date).toLocaleDateString()}</td>
+                      <td>{appt.time}</td>
+                      <td>
+                        <span className={`status-badge status-${appt.status?.toLowerCase()}`}>
+                          {appt.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan="5" className="no-data">No appointments yet</td></tr>
+                )}
               </tbody>
             </table>
-          )}
-          {!loading && appointments.length === 0 && (
-            <p className="p-5 text-center text-gray-500">No appointments found in the database.</p>
           )}
         </div>
       </div>
