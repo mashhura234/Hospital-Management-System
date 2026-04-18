@@ -71,7 +71,6 @@ const bookAppointment = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Check if patient exists
     const patient = await pool.request()
       .input('patient_id', sql.Int, patient_id)
       .query('SELECT * FROM Patients WHERE id = @patient_id');
@@ -80,7 +79,6 @@ const bookAppointment = async (req, res) => {
       return res.status(404).json({ message: 'Patient not found.' });
     }
 
-    // Check if doctor exists
     const doctor = await pool.request()
       .input('doctor_id', sql.Int, doctor_id)
       .query('SELECT * FROM Doctors WHERE id = @doctor_id');
@@ -89,7 +87,7 @@ const bookAppointment = async (req, res) => {
       return res.status(404).json({ message: 'Doctor not found.' });
     }
 
-    // Check if availability slot exists and is not already booked
+    // Check slot exists and is not booked
     const slot = await pool.request()
       .input('availability_id', sql.Int, availability_id)
       .query('SELECT * FROM DoctorAvailability WHERE id = @availability_id AND is_booked = 0');
@@ -98,22 +96,23 @@ const bookAppointment = async (req, res) => {
       return res.status(400).json({ message: 'This slot is not available. Please choose another.' });
     }
 
-    const { available_date, available_time } = slot.recordset[0];
+    const available_date = slot.recordset[0].available_date;
+    const available_time = slot.recordset[0].available_time;
 
-    // Book the appointment
+    // Book the appointment — use VarChar for time
     const result = await pool.request()
       .input('patient_id', sql.Int, patient_id)
       .input('doctor_id', sql.Int, doctor_id)
       .input('availability_id', sql.Int, availability_id)
       .input('date', sql.Date, available_date)
-      .input('time', sql.Time, available_time)
+      .input('time', sql.VarChar, available_time)
       .query(`
         INSERT INTO Appointments (patient_id, doctor_id, availability_id, date, time, status)
         OUTPUT INSERTED.id
         VALUES (@patient_id, @doctor_id, @availability_id, @date, @time, 'pending')
       `);
 
-    // Mark the slot as booked
+    // Mark slot as booked
     await pool.request()
       .input('availability_id', sql.Int, availability_id)
       .query('UPDATE DoctorAvailability SET is_booked = 1 WHERE id = @availability_id');
