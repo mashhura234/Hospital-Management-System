@@ -46,21 +46,21 @@
 /* Grid Layout — wider cards */
 .dept-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, 1fr) !important;
   gap: 1.5rem;
+  width: 100%;
 }
 
-/* Department Card */
 .dept-card {
   background: white;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
-  padding: 1.25rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   transition: box-shadow 0.3s ease, transform 0.2s ease;
-  min-width: 0;
+  min-height: 160px;
 }
 
 .dept-card:hover {

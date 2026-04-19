@@ -75,7 +75,9 @@ const getDoctorAvailability = async (req, res) => {
     const result = await pool.request()
       .input('doctor_id', sql.Int, doctor_id)
       .query(`
-        SELECT da.id, da.available_date, da.available_time, da.available_end_time, da.is_booked,
+        SELECT da.id, da.available_date, da.available_time, 
+               da.available_end_time, da.is_booked,
+               da.max_patients, da.booked_count,
                u.name AS doctor_name,
                dept.name AS department_name,
                d.specialization
@@ -84,8 +86,8 @@ const getDoctorAvailability = async (req, res) => {
         JOIN Users u ON d.user_id = u.id
         JOIN Departments dept ON d.department_id = dept.id
         WHERE da.doctor_id = @doctor_id
-        AND da.is_booked = 0
         AND da.available_date >= CAST(GETDATE() AS DATE)
+        AND (da.booked_count < da.max_patients OR da.max_patients IS NULL)
         ORDER BY da.available_date, da.available_time
       `);
 
@@ -95,7 +97,6 @@ const getDoctorAvailability = async (req, res) => {
     res.status(500).json({ message: 'Server error. Please try again.' });
   }
 };
-
 // GET MY AVAILABILITY SLOTS
 const getMyAvailability = async (req, res) => {
   try {

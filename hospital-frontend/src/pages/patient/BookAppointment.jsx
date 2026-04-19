@@ -18,6 +18,7 @@ function BookAppointment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [profileModal, setProfileModal] = useState(null);
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -28,7 +29,7 @@ function BookAppointment() {
       if (parsedUser.role !== 'patient') { navigate('/login'); return; }
       setUser(parsedUser);
       fetchDepartments();
-      fetchPatientId(parsedUser.id);
+      fetchPatientId();
     } catch { navigate('/login'); }
   }, [navigate]);
 
@@ -39,11 +40,12 @@ function BookAppointment() {
     } catch {}
   };
 
-  const fetchPatientId = async (userId) => {
+  const fetchPatientId = async () => {
     try {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
       const res = await axios.get('http://localhost:5000/api/patients',
         { headers: { Authorization: `Bearer ${token}` } });
-      const myProfile = res.data.find(p => p.email === JSON.parse(localStorage.getItem('user')).email);
+      const myProfile = res.data.find(p => p.email === storedUser.email);
       if (myProfile) setPatientId(myProfile.id);
     } catch {}
   };
@@ -53,6 +55,7 @@ function BookAppointment() {
     setSelectedDoctor(null);
     setSlots([]);
     setStep(2);
+    setError('');
     try {
       const res = await axios.get('http://localhost:5000/api/doctors',
         { headers: { Authorization: `Bearer ${token}` } });
@@ -65,6 +68,8 @@ function BookAppointment() {
     setSelectedDoctor(doctor);
     setSelectedSlot(null);
     setStep(3);
+    setError('');
+    setProfileModal(null);
     try {
       const res = await axios.get(`http://localhost:5000/api/availability/${doctor.id}`,
         { headers: { Authorization: `Bearer ${token}` } });
@@ -75,7 +80,7 @@ function BookAppointment() {
   const handleBooking = async () => {
     setError('');
     if (!selectedSlot) { setError('Please select a time slot.'); return; }
-    if (!patientId) { setError('Patient profile not found. Please complete your registration.'); return; }
+    if (!patientId) { setError('Patient profile not found. Please complete registration.'); return; }
     try {
       setLoading(true);
       await axios.post('http://localhost:5000/api/appointments', {
@@ -129,7 +134,7 @@ function BookAppointment() {
         {step === 1 && (
           <div className="booking-section">
             <h3 className="booking-section-title">🏢 Select a Department</h3>
-            <div className="dept-grid">
+            <div className="dept-grid-booking">
               {departments.map(dept => (
                 <div
                   key={dept.id}
@@ -147,20 +152,32 @@ function BookAppointment() {
         {/* Step 2 - Select Doctor */}
         {step === 2 && (
           <div className="booking-section">
-            <button className="booking-back-btn" onClick={() => setStep(1)}>← Back to Departments</button>
-            <h3 className="booking-section-title">👨‍⚕️ Select a Doctor in {selectedDept?.name}</h3>
+            <button className="booking-back-btn" onClick={() => setStep(1)}>
+              ← Back to Departments
+            </button>
+            <h3 className="booking-section-title">
+              👨‍⚕️ Select a Doctor in {selectedDept?.name}
+            </h3>
             {doctors.length > 0 ? (
               <div className="doctor-grid-booking">
                 {doctors.map(doc => (
-                  <div
-                    key={doc.id}
-                    className="doctor-card-booking"
-                    onClick={() => handleDoctorSelect(doc)}>
+                  <div key={doc.id} className="doctor-card-booking">
                     <div className="doctor-avatar-booking">{doc.name[0]}</div>
                     <h4>{doc.name}</h4>
                     <p className="doctor-spec-booking">{doc.specialization}</p>
                     <p className="doctor-dept-booking">{doc.department_name}</p>
-                    <button className="view-slots-btn">View Available Slots →</button>
+                    <div className="doctor-card-actions">
+                      <button
+                        className="view-profile-btn"
+                        onClick={() => setProfileModal(doc)}>
+                        👤 View Profile
+                      </button>
+                      <button
+                        className="view-slots-btn"
+                        onClick={() => handleDoctorSelect(doc)}>
+                        📅 Book Slot
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -173,8 +190,12 @@ function BookAppointment() {
         {/* Step 3 - Select Slot */}
         {step === 3 && (
           <div className="booking-section">
-            <button className="booking-back-btn" onClick={() => setStep(2)}>← Back to Doctors</button>
-            <h3 className="booking-section-title">📅 Select a Time Slot with {selectedDoctor?.name}</h3>
+            <button className="booking-back-btn" onClick={() => setStep(2)}>
+              ← Back to Doctors
+            </button>
+            <h3 className="booking-section-title">
+              📅 Available Slots with {selectedDoctor?.name}
+            </h3>
 
             {slots.length > 0 ? (
               <>
@@ -191,6 +212,11 @@ function BookAppointment() {
                         ⏰ {slot.available_time}
                         {slot.available_end_time && ` - ${slot.available_end_time}`}
                       </div>
+                      {slot.max_patients && (
+                        <div className="slot-capacity">
+                          👥 {slot.booked_count || 0}/{slot.max_patients} booked
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -217,11 +243,63 @@ function BookAppointment() {
               <div className="no-slots-msg">
                 <p>😔 No available slots for this doctor yet.</p>
                 <p>Please check back later or choose another doctor.</p>
-                <button className="booking-back-btn" onClick={() => setStep(2)}>← Choose Another Doctor</button>
+                <button className="booking-back-btn" onClick={() => setStep(2)}>
+                  ← Choose Another Doctor
+                </button>
               </div>
             )}
           </div>
         )}
+
+        {/* Doctor Profile Modal */}
+        {profileModal && (
+          <div className="modal-overlay" onClick={() => setProfileModal(null)}>
+            <div className="doctor-profile-modal" onClick={e => e.stopPropagation()}>
+              <button className="modal-close-btn" onClick={() => setProfileModal(null)}>✕</button>
+
+              <div className="modal-doctor-header">
+                <div className="modal-doctor-avatar">{profileModal.name[0]}</div>
+                <div>
+                  <h2 className="modal-doctor-name">{profileModal.name}</h2>
+                  <p className="modal-doctor-spec">{profileModal.specialization}</p>
+                  <p className="modal-doctor-dept">🏢 {profileModal.department_name}</p>
+                </div>
+              </div>
+
+              <div className="modal-doctor-details">
+                <div className="modal-detail-row">
+                  <span className="modal-detail-label">📞 Phone</span>
+                  <span className="modal-detail-value">{profileModal.phone || 'Not provided'}</span>
+                </div>
+                <div className="modal-detail-row">
+                  <span className="modal-detail-label">🏥 Department</span>
+                  <span className="modal-detail-value">{profileModal.department_name}</span>
+                </div>
+                <div className="modal-detail-row">
+                  <span className="modal-detail-label">⚕️ Specialization</span>
+                  <span className="modal-detail-value">{profileModal.specialization}</span>
+                </div>
+                {profileModal.degrees && (
+                  <div className="modal-detail-row">
+                    <span className="modal-detail-label">🎓 Degrees</span>
+                    <div className="modal-degrees">
+                      {profileModal.degrees.split(',').map((deg, i) => (
+                        <span key={i} className="modal-degree-tag">{deg.trim()}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="modal-book-btn"
+                onClick={() => handleDoctorSelect(profileModal)}>
+                📅 Book Appointment with {profileModal.name}
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

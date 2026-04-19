@@ -87,19 +87,42 @@ const bookAppointment = async (req, res) => {
       return res.status(404).json({ message: 'Doctor not found.' });
     }
 
-    // Check slot exists and is not booked
+    // Check slot exists and has capacity
     const slot = await pool.request()
       .input('availability_id', sql.Int, availability_id)
-      .query('SELECT * FROM DoctorAvailability WHERE id = @availability_id AND is_booked = 0');
+      .query(`SELECT * FROM DoctorAvailability 
+              WHERE id = @availability_id 
+              AND available_date >= CAST(GETDATE() AS DATE)`);
 
     if (slot.recordset.length === 0) {
-      return res.status(400).json({ message: 'This slot is not available. Please choose another.' });
+      return res.status(400).json({ message: 'This slot is not available.' });
     }
 
-    const available_date = slot.recordset[0].available_date;
-    const available_time = slot.recordset[0].available_time;
+    const slotData = slot.recordset[0];
+    const maxPatients = slotData.max_patients || 10;
+    const bookedCount = slotData.booked_count || 0;
 
-    // Book the appointment — use VarChar for time
+    if (bookedCount >= maxPatients) {
+      return res.status(400).json({ message: 'This slot is fully booked. Please choose another.' });
+    }
+
+    // Check if THIS patient already has a pending appointment for this slot
+    const existingBooking = await pool.request()
+      .input('patient_id', sql.Int, patient_id)
+      .input('availability_id', sql.Int, availability_id)
+      .query(`SELECT * FROM Appointments 
+              WHERE patient_id = @patient_id 
+              AND availability_id = @availability_id
+              AND status != 'cancelled'`);
+
+    if (existingBooking.recordset.length > 0) {
+      return res.status(400).json({ message: 'You already have a booking for this slot.' });
+    }
+
+    const available_date = slotData.available_date;
+    const available_time = slotData.available_time;
+
+    // Book the appointment
     const result = await pool.request()
       .input('patient_id', sql.Int, patient_id)
       .input('doctor_id', sql.Int, doctor_id)
@@ -112,10 +135,13 @@ const bookAppointment = async (req, res) => {
         VALUES (@patient_id, @doctor_id, @availability_id, @date, @time, 'pending')
       `);
 
-    // Mark slot as booked
+    // Increment booked count
     await pool.request()
       .input('availability_id', sql.Int, availability_id)
-      .query('UPDATE DoctorAvailability SET is_booked = 1 WHERE id = @availability_id');
+      .query(`UPDATE DoctorAvailability 
+              SET booked_count = ISNULL(booked_count, 0) + 1,
+              is_booked = CASE WHEN ISNULL(booked_count, 0) + 1 >= ISNULL(max_patients, 10) THEN 1 ELSE 0 END
+              WHERE id = @availability_id`);
 
     res.status(201).json({
       message: 'Appointment booked successfully!',
@@ -154,13 +180,16 @@ const updateAppointment = async (req, res) => {
       .input('status', sql.VarChar, status)
       .query('UPDATE Appointments SET status = @status WHERE id = @id');
 
-    // If cancelled, free up the availability slot
-    if (status === 'cancelled') {
-      const availability_id = existing.recordset[0].availability_id;
-      await pool.request()
-        .input('availability_id', sql.Int, availability_id)
-        .query('UPDATE DoctorAvailability SET is_booked = 0 WHERE id = @availability_id');
-    }
+   // If cancelled, decrement the booked count
+if (status === 'cancelled') {
+  const availability_id = existing.recordset[0].availability_id;
+  await pool.request()
+    .input('availability_id', sql.Int, availability_id)
+    .query(`UPDATE DoctorAvailability 
+            SET booked_count = CASE WHEN ISNULL(booked_count, 0) > 0 THEN booked_count - 1 ELSE 0 END,
+            is_booked = 0
+            WHERE id = @availability_id`);
+}
 
     res.status(200).json({ message: 'Appointment status updated successfully!' });
 

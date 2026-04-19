@@ -8,7 +8,7 @@ const getAllDoctors = async (req, res) => {
       .query(`
         SELECT d.id, u.name, u.email, u.role,
                dept.name AS department_name,
-               d.specialization, d.phone
+               d.specialization, d.phone, d.degrees
         FROM Doctors d
         JOIN Users u ON d.user_id = u.id
         JOIN Departments dept ON d.department_id = dept.id
